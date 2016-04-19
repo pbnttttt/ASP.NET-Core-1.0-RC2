@@ -1,9 +1,10 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNet.Builder;
-using Microsoft.AspNet.Hosting;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,17 +13,6 @@ namespace WebApplication4
 {
     public class Startup
     {
-        public Startup(IHostingEnvironment env)
-        {
-            // Set up configuration sources.
-            var builder = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json")
-                .AddEnvironmentVariables();
-            Configuration = builder.Build();
-        }
-
-        public IConfigurationRoot Configuration { get; set; }
-
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
@@ -33,6 +23,13 @@ namespace WebApplication4
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
+            // Set up configuration sources.
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json")
+                .AddEnvironmentVariables();
+            var Configuration = builder.Build();
+            
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
 
@@ -46,8 +43,6 @@ namespace WebApplication4
                 app.UseExceptionHandler("/Home/Error");
             }
 
-            app.UseIISPlatformHandler();
-
             app.UseStaticFiles();
 
             app.UseMvc(routes =>
@@ -59,6 +54,25 @@ namespace WebApplication4
         }
 
         // Entry point for the application.
-        public static void Main(string[] args) => WebApplication.Run<Startup>(args);
+        public static void Main(string[] args) 
+        {
+            // Set up configuration sources.
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json")
+                .Build();
+                
+            var config = builder.ReloadOnChanged("appsettings.json");
+            
+            var host = new WebHostBuilder()
+            .UseKestrel()
+            .UseContentRoot(Directory.GetCurrentDirectory())
+            .UseConfiguration(config)
+            .UseIISIntegration()
+            .UseStartup<Startup>()
+            .Build();
+            
+            host.Run();
+        }
     }
 }
